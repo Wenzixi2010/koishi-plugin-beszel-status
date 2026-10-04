@@ -23,7 +23,7 @@ export function StatusCard ({ data }: { data: CardData }) {
       <div className="board-head">
         <div className="brand">
           <div className="brand-logo">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="4" width="18" height="7" rx="2" />
               <rect x="3" y="13" width="18" height="7" rx="2" />
               <line x1="7" y1="7.5" x2="7.01" y2="7.5" />
