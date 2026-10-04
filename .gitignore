@@ -1,0 +1,11 @@
+node_modules/
+lib/
+dist/
+*.log
+.DS_Store
+.idea/
+.vscode/
+
+# 内部文档：项目引导与 AGENT 提示，仅本地使用，不入库
+PROJECT_GUIDE.md
+AGENT_PROMPT.md

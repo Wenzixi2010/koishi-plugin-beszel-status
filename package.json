@@ -1,0 +1,61 @@
+{
+  "name": "koishi-plugin-beszel-status",
+  "version": "0.1.0",
+  "description": "把 Beszel 服务器状态渲染成图片卡片并发送到触发的聊天会话",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
+  "files": [
+    "lib",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "bot",
+    "chatbot",
+    "koishi",
+    "beszel",
+    "server",
+    "status",
+    "monitor"
+  ],
+  "koishi": {
+    "description": {
+      "zh": "把 Beszel 服务器状态渲染成图片卡片并发送到触发的聊天会话",
+      "en": "Render Beszel server status as an image card and send it to the triggering chat"
+    },
+    "service": {
+      "required": [],
+      "optional": [
+        "puppeteer"
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check-types": "tsc -p tsconfig.json --noEmit"
+  },
+  "peerDependencies": {
+    "koishi": "^4.18.7"
+  },
+  "dependencies": {
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.7.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "koishi": "^4.18.7",
+    "typescript": "^5.6.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Wenzixi2010/koishi-plugin-beszel-status.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Wenzixi2010/koishi-plugin-beszel-status/issues"
+  },
+  "homepage": "https://github.com/Wenzixi2010/koishi-plugin-beszel-status#readme"
+}
