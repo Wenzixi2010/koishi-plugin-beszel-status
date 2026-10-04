@@ -13,11 +13,15 @@ export function SystemCard ({ system, fields }: Props) {
   const info: BeszelInfo = system.info ?? {}
   const status = system.status ?? 'pending'
 
-  const showMetrics = fields.cpu || fields.memory || fields.disk
   const metrics: React.ReactNode[] = []
-  if (fields.cpu) metrics.push(<MetricBar key="cpu" label="CPU" value={info.cpu} />)
-  if (fields.memory) metrics.push(<MetricBar key="mem" label="内存" value={info.mp} />)
-  if (fields.disk) metrics.push(<MetricBar key="disk" label="磁盘" value={info.dp} />)
+  // 离线或未上报的机器没有数据，缺值的项直接不画
+  const pushMetric = (key: string, label: string, value?: number) => {
+    if (!Number.isFinite(Number(value))) return
+    metrics.push(<MetricBar key={key} label={label} value={value} />)
+  }
+  if (fields.cpu) pushMetric('cpu', 'CPU', info.cpu)
+  if (fields.memory) pushMetric('mem', '内存', info.mp)
+  if (fields.disk) pushMetric('disk', '磁盘', info.dp)
 
   const loadAvg = Array.isArray(info.la) && info.la.length >= 3
     ? info.la.slice(0, 3).map((n) => Number(n).toFixed(2)).join(' / ')
@@ -66,7 +70,7 @@ export function SystemCard ({ system, fields }: Props) {
         <StatusPill status={status} />
       </div>
 
-      {showMetrics && metrics.length > 0 && <div className="metrics">{metrics}</div>}
+      {metrics.length > 0 && <div className="metrics">{metrics}</div>}
       {meta.length > 0 && <div className="meta">{meta}</div>}
       {chips.length > 0 && <div className="chips">{chips}</div>}
     </div>
