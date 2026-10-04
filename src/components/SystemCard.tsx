@@ -75,12 +75,17 @@ export function SystemCard ({ system, fields, hostDisplay, charts, heartbeatRang
   const showHeartbeat = fields.heartbeat && (history?.heartbeat?.length ?? 0) > 0
 
   return (
-    <div className={`sys sys-${status}`}>
-      <div className="sys-head">
-        <span className="sys-name">{system.name}</span>
-        {showHost && <span className="sys-host">{host}{system.port ? `:${system.port}` : ''}</span>}
+    <article className={`sys sys-${status}`}>
+      <header className="sys-head">
+        <div className="sys-identity">
+          <span className={`sys-mark sys-mark-${status}`} />
+          <div className="sys-labels">
+            <span className="sys-name">{system.name}</span>
+            {showHost && <span className="sys-host">{host}{system.port ? `:${system.port}` : ''}</span>}
+          </div>
+        </div>
         <StatusPill status={status} />
-      </div>
+      </header>
 
       {metrics.length > 0 && <div className="metrics">{metrics}</div>}
 
@@ -95,8 +100,12 @@ export function SystemCard ({ system, fields, hostDisplay, charts, heartbeatRang
         </div>
       )}
 
-      {meta.length > 0 && <div className="meta">{meta}</div>}
-      {chips.length > 0 && <div className="chips">{chips}</div>}
-    </div>
+      {(meta.length > 0 || chips.length > 0) && (
+        <div className="sys-details">
+          {meta.length > 0 && <div className="meta">{meta}</div>}
+          {chips.length > 0 && <div className="chips">{chips}</div>}
+        </div>
+      )}
+    </article>
   )
 }

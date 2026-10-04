@@ -12,32 +12,28 @@ export function StatusCard ({ data }: { data: CardData }) {
 
   return (
     <div className="board">
-      <div className="board-head">
-        <div className="brand">
-          <div className="brand-logo">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="4" width="18" height="7" rx="2" />
-              <rect x="3" y="13" width="18" height="7" rx="2" />
-              <line x1="7" y1="7.5" x2="7.01" y2="7.5" />
-              <line x1="7" y1="16.5" x2="7.01" y2="16.5" />
-            </svg>
-          </div>
-          <div className="brand-text">
-            <div className="title">{title}</div>
-            {subtitle ? <div className="sub">{subtitle}</div> : null}
-          </div>
+      <header className="board-head">
+        <div className="brand-text">
+          <div className="eyebrow">服务器状态</div>
+          <div className="title">{title}</div>
+          {subtitle ? <div className="sub">{subtitle}</div> : null}
         </div>
         <div className="head-time">
-          <b>{summary.total} 台服务器</b>
-          {formatDateTime(new Date())}
+          <span>更新于</span>
+          <b>{formatDateTime(new Date())}</b>
         </div>
-      </div>
+      </header>
 
       {fields.overview && summary.total > 0 && (
-        <div className="overview">
-          <div className="ring" style={{ background: ringGradient(summary, theme) }}>
-            <div className="ring-hole">
-              <span className="ring-value">{online}%</span>
+        <section className="overview" aria-label="服务器状态总览">
+          <div className="overview-lead">
+            <div className="overview-total"><b>{summary.total}</b><span>台服务器</span></div>
+            <div className="overview-rate">
+              <div className="ring" style={{ background: ringGradient(summary, theme) }}>
+                <div className="ring-hole">
+                  <span className="ring-value">{online}<small>%</small></span>
+                </div>
+              </div>
               <span className="ring-label">在线率</span>
             </div>
           </div>
@@ -45,15 +41,15 @@ export function StatusCard ({ data }: { data: CardData }) {
             {LEGEND.map((key) => (
               <div className="legend-item" key={key}>
                 <span className={`dot dot-${key}`} />
-                {statusLabel(key)}
+                <span>{statusLabel(key)}</span>
                 <b>{summary[key]}</b>
               </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      <div className="systems">
+      <main className="systems">
         {systems.length > 0
           ? systems.map((system) => (
             <SystemCard
@@ -66,13 +62,13 @@ export function StatusCard ({ data }: { data: CardData }) {
             />
           ))
           : <div className="empty">没有可显示的服务器</div>}
-      </div>
+      </main>
 
       {fields.footer && footer ? (
-        <div className="footer">
+        <footer className="footer">
           <span>{footer}</span>
           <span>koishi-plugin-beszel-status</span>
-        </div>
+        </footer>
       ) : null}
     </div>
   )
