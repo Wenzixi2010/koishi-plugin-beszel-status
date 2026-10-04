@@ -63,7 +63,7 @@ export function SystemCard ({ system, fields }: Props) {
   }
 
   return (
-    <div className="sys">
+    <div className={`sys sys-${status}`}>
       <div className="sys-head">
         <span className="sys-name">{system.name}</span>
         {fields.host && <span className="sys-host">{system.host}{system.port ? `:${system.port}` : ''}</span>}

@@ -68,6 +68,9 @@ export type ThemeMode = 'light' | 'dark'
 
 export type ImageFormat = 'png' | 'jpeg' | 'webp'
 
+/** 卡片背景样式 */
+export type BackgroundType = 'plain' | 'aurora' | 'grid' | 'dots' | 'image'
+
 /** 卡片上各项内容的显示开关 */
 export interface CardFields {
   overview: boolean
@@ -95,6 +98,14 @@ export interface CardTheme {
   mode: ThemeMode
   accent: string
   width: number
+  /** 背景样式 */
+  background: BackgroundType
+  /** 已解析成可直接使用的地址（URL / data URI），仅 background 为 image 时生效 */
+  backgroundImage: string
+  /** 背景模糊强度（像素） */
+  backgroundBlur: number
+  /** 背景压暗程度（0-100） */
+  backgroundDim: number
 }
 
 /** 渲染（截图）相关参数 */

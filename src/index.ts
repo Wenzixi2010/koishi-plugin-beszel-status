@@ -1,8 +1,10 @@
 import { Context, Schema, segment } from 'koishi'
+import { promises as fs } from 'fs'
+import { extname } from 'path'
 import { BeszelError, fetchSystems } from './beszel'
 import { renderStatusImage } from './render'
 import { statusOrder } from './format'
-import type { BeszelSystem, CardData, CardFields, StatusSummary } from './types'
+import type { BackgroundType, BeszelSystem, CardData, CardFields, StatusSummary } from './types'
 
 export const name = 'beszel-status'
 
@@ -25,6 +27,10 @@ export interface Config {
   footerText: string
   theme: 'light' | 'dark'
   accent: string
+  background: BackgroundType
+  backgroundImage: string
+  backgroundBlur: number
+  backgroundDim: number
   width: number
   deviceScaleFactor: number
   format: 'png' | 'jpeg' | 'webp'
@@ -95,6 +101,19 @@ export const Config: Schema<Config> = Schema.intersect([
     ]).default('dark').description('卡片主题'),
     accent: Schema.string().default('#4f8cff')
       .description('主题强调色（HEX，例如 #4f8cff）'),
+    background: Schema.union([
+      Schema.const('aurora').description('极光（强调色柔光，推荐）'),
+      Schema.const('plain').description('纯色'),
+      Schema.const('grid').description('网格'),
+      Schema.const('dots').description('点阵'),
+      Schema.const('image').description('自定义图片')
+    ]).default('aurora').description('背景样式'),
+    backgroundImage: Schema.string().default('')
+      .description('自定义背景图：URL、data URI 或服务器上的本地文件路径（仅背景样式为「自定义图片」时生效）'),
+    backgroundBlur: Schema.natural().default(0).max(60)
+      .description('背景模糊强度（像素）'),
+    backgroundDim: Schema.natural().default(25).max(100)
+      .description('背景压暗程度（0-100，越大越暗，便于看清文字）'),
     width: Schema.natural().default(760).min(320).max(1400)
       .description('卡片宽度（像素）'),
     deviceScaleFactor: Schema.number().default(2).min(1).max(4)
@@ -204,6 +223,39 @@ function sortSystems (systems: BeszelSystem[], sortBy: Config['sortBy']): Beszel
   }
 }
 
+const IMAGE_MIME: Record<string, string> = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif',
+  '.bmp': 'image/bmp',
+  '.svg': 'image/svg+xml'
+}
+
+const backgroundCache = new Map<string, string>()
+
+/** 本地图片读成 data URI，HTTP(S) 与 data URI 直接放行；按 mtime 缓存避免重复读盘 */
+async function resolveBackground (source: string): Promise<string> {
+  const src = (source || '').trim()
+  if (!src) return ''
+  if (/^(https?:|data:)/i.test(src)) return src
+  try {
+    const stat = await fs.stat(src)
+    if (!stat.isFile() || stat.size > 8 * 1024 * 1024) return ''
+    const key = `${src}::${stat.mtimeMs}::${stat.size}`
+    const cached = backgroundCache.get(key)
+    if (cached) return cached
+    const buffer = await fs.readFile(src)
+    const uri = `data:${IMAGE_MIME[extname(src).toLowerCase()] || 'image/png'};base64,${buffer.toString('base64')}`
+    backgroundCache.clear()
+    backgroundCache.set(key, uri)
+    return uri
+  } catch {
+    return ''
+  }
+}
+
 export function apply (ctx: Context, config: Config) {
   const logger = ctx.logger('beszel-status')
   const commandName = (config.commandName || 'beszel').trim() || 'beszel'
@@ -242,6 +294,14 @@ export function apply (ctx: Context, config: Config) {
       // 指定单台服务器时隐藏总览，避免出现一排无意义的 0
       if (target) fields.overview = false
 
+      let background: BackgroundType = config.background || 'aurora'
+      let backgroundImage = ''
+      if (background === 'image') {
+        backgroundImage = await resolveBackground(config.backgroundImage || '')
+        // 图片缺失或读取失败时退回极光，避免出现一片空白底
+        if (!backgroundImage) background = 'aurora'
+      }
+
       const data: CardData = {
         title: config.title || 'Beszel 服务器状态',
         subtitle: config.subtitle || '',
@@ -252,7 +312,11 @@ export function apply (ctx: Context, config: Config) {
         theme: {
           mode: config.theme === 'light' ? 'light' : 'dark',
           accent: config.accent || '#4f8cff',
-          width: config.width || 760
+          width: config.width || 760,
+          background,
+          backgroundImage,
+          backgroundBlur: config.backgroundBlur ?? 0,
+          backgroundDim: config.backgroundDim ?? 30
         }
       }
 

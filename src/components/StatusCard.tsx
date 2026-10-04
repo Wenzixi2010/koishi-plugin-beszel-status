@@ -1,22 +1,14 @@
 import React from 'react'
 import type { CardData, StatusSummary } from '../types'
 import { formatDateTime, statusLabel } from '../format'
+import { ringGradient } from '../styles'
 import { SystemCard } from './SystemCard'
 
-function Stat ({ status, value }: { status: keyof StatusSummary; value: number }) {
-  return (
-    <div className="stat">
-      <div className="stat-label">
-        <span className={`dot dot-${status}`} />
-        {statusLabel(status)}
-      </div>
-      <div className="stat-value">{value}</div>
-    </div>
-  )
-}
+const LEGEND: Array<keyof StatusSummary> = ['up', 'down', 'paused', 'pending']
 
 export function StatusCard ({ data }: { data: CardData }) {
-  const { systems, summary, fields, title, subtitle, footer } = data
+  const { systems, summary, fields, title, subtitle, footer, theme } = data
+  const online = summary.total > 0 ? Math.round((summary.up / summary.total) * 100) : 0
 
   return (
     <div className="board">
@@ -41,12 +33,23 @@ export function StatusCard ({ data }: { data: CardData }) {
         </div>
       </div>
 
-      {fields.overview && (
+      {fields.overview && summary.total > 0 && (
         <div className="overview">
-          <Stat status="up" value={summary.up} />
-          <Stat status="down" value={summary.down} />
-          <Stat status="paused" value={summary.paused} />
-          <Stat status="pending" value={summary.pending} />
+          <div className="ring" style={{ background: ringGradient(summary, theme) }}>
+            <div className="ring-hole">
+              <span className="ring-value">{online}%</span>
+              <span className="ring-label">在线率</span>
+            </div>
+          </div>
+          <div className="legend">
+            {LEGEND.map((key) => (
+              <div className="legend-item" key={key}>
+                <span className={`dot dot-${key}`} />
+                {statusLabel(key)}
+                <b>{summary[key]}</b>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
