@@ -11,7 +11,7 @@ export function buildHtml (data: CardData): string {
   const css = buildCss(data.theme)
   return '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8" />'
     + '<meta name="viewport" content="width=device-width, initial-scale=1" />'
-    + `<style>${css}</style></head><body>${body}</body></html>`
+    + `<style>${css}</style></head><body><div id="app">${body}</div></body></html>`
 }
 
 /** 用浏览器渲染服务把卡片截成图片 */
