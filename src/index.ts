@@ -1,10 +1,12 @@
 import { Context, Schema, segment } from 'koishi'
 import { promises as fs } from 'fs'
 import { extname } from 'path'
-import { BeszelError, fetchSystems } from './beszel'
+import { BeszelError, fetchSystems, fetchSystemStats } from './beszel'
+import type { BeszelAuth } from './beszel'
 import { renderStatusImage } from './render'
 import { statusOrder } from './format'
-import type { BackgroundType, BeszelSystem, CardData, CardFields, StatusSummary } from './types'
+import { buildHistory } from './history'
+import type { BackgroundType, BeszelSystem, CardData, CardFields, ChartMetric, HeartbeatRange, HostDisplay, StatusSummary } from './types'
 
 export const name = 'beszel-status'
 
@@ -39,6 +41,11 @@ export interface Config {
   sortBy: 'default' | 'name' | 'status' | 'cpu' | 'memory' | 'disk'
   hidePaused: boolean
 
+  hostDisplay: HostDisplay
+  heartbeatRange: HeartbeatRange
+  heartbeatBuckets: number
+  charts: ChartMetric[]
+
   fields: CardFields
 
   errorTemplate: string
@@ -47,7 +54,6 @@ export interface Config {
 
 const FIELDS: CardFields = {
   overview: true,
-  host: true,
   cpu: true,
   memory: true,
   disk: true,
@@ -64,6 +70,7 @@ const FIELDS: CardFields = {
   updates: true,
   battery: true,
   net: false,
+  heartbeat: true,
   footer: true
 }
 
@@ -142,7 +149,6 @@ export const Config: Schema<Config> = Schema.intersect([
   Schema.object({
     fields: Schema.object({
       overview: Schema.boolean().default(FIELDS.overview).description('顶部状态总览'),
-      host: Schema.boolean().default(FIELDS.host).description('主机地址与端口'),
       cpu: Schema.boolean().default(FIELDS.cpu).description('CPU 占用率'),
       memory: Schema.boolean().default(FIELDS.memory).description('内存占用率'),
       disk: Schema.boolean().default(FIELDS.disk).description('磁盘占用率'),
@@ -159,9 +165,32 @@ export const Config: Schema<Config> = Schema.intersect([
       updates: Schema.boolean().default(FIELDS.updates).description('可用更新'),
       battery: Schema.boolean().default(FIELDS.battery).description('电池电量'),
       net: Schema.boolean().default(FIELDS.net).description('带宽'),
+      heartbeat: Schema.boolean().default(FIELDS.heartbeat).description('在线心跳图'),
       footer: Schema.boolean().default(FIELDS.footer).description('底部信息栏')
     }).description('卡片显示项')
   }).description('卡片显示项'),
+
+  Schema.object({
+    hostDisplay: Schema.union([
+      Schema.const('show').description('完整显示'),
+      Schema.const('mask').description('打码（如 45.76.***.***）'),
+      Schema.const('hide').description('完全隐藏')
+    ]).default('show').description('设备地址显示方式'),
+    charts: Schema.array(Schema.union([
+      Schema.const('cpu').description('CPU 占用率'),
+      Schema.const('memory').description('内存占用率'),
+      Schema.const('disk').description('磁盘占用率')
+    ])).default(['cpu']).description('折线图显示的指标，可多选，留空则不显示折线图'),
+    heartbeatRange: Schema.union([
+      Schema.const('1m').description('最近 1 小时'),
+      Schema.const('10m').description('最近 12 小时'),
+      Schema.const('20m').description('最近 24 小时'),
+      Schema.const('120m').description('最近 7 天'),
+      Schema.const('480m').description('最近 30 天')
+    ]).default('20m').description('历史数据区间（同时决定心跳图与折线图的时间跨度）'),
+    heartbeatBuckets: Schema.natural().default(30).min(8).max(60)
+      .description('心跳图的时间分段数量，越多越细')
+  }).description('历史与图表'),
 
   Schema.object({
     errorTemplate: Schema.string().default('获取 Beszel 状态失败：{error}')
@@ -179,9 +208,11 @@ export const usage = `
 | 指令 | 作用 |
 | --- | --- |
 | \`beszel\` | 渲染全部服务器状态卡片 |
-| \`beszel <名称>\` | 只渲染指定服务器 |
+| \`beszel <关键词>\` | 只渲染名称匹配的服务器，支持正则（例如 \`beszel ^hk-\`） |
 
 指令名称和别名都可以在配置里改。插件会把卡片渲染成图片，直接发到触发指令的会话中。
+
+卡片可选展示在线心跳图（Uptime-Kuma 风格）与 CPU / 内存 / 磁盘折线图，主机地址支持完整显示、打码或隐藏。
 
 ## 依赖
 
@@ -220,6 +251,41 @@ function sortSystems (systems: BeszelSystem[], sortBy: Config['sortBy']): Beszel
       return list.sort((a, b) => num(b.info?.dp) - num(a.info?.dp))
     default:
       return list.sort((a, b) => statusOrder(a.status) - statusOrder(b.status) || byName(a, b))
+  }
+}
+
+const CHART_METRICS: ChartMetric[] = ['cpu', 'memory', 'disk']
+
+/** 过滤掉配置里非法的图表指标，并保持固定顺序 */
+function normalizeCharts (value?: ChartMetric[]): ChartMetric[] {
+  if (!Array.isArray(value)) return []
+  return CHART_METRICS.filter((metric) => value.includes(metric))
+}
+
+const HISTORY_CONCURRENCY = 6
+
+/** 为每台服务器拉取历史数据；单台失败时退回空历史，不影响整张卡片 */
+async function attachHistory (
+  systems: BeszelSystem[],
+  auth: BeszelAuth,
+  range: HeartbeatRange,
+  buckets: number,
+  charts: ChartMetric[],
+  logger: any,
+  debug: boolean
+): Promise<void> {
+  const load = async (system: BeszelSystem) => {
+    try {
+      const records = await fetchSystemStats(auth, system.id, range)
+      system.history = buildHistory(records, range, buckets, charts)
+    } catch (error: any) {
+      if (debug) logger.debug(error)
+      system.history = { heartbeat: new Array(buckets).fill('none'), series: {} }
+    }
+  }
+
+  for (let i = 0; i < systems.length; i += HISTORY_CONCURRENCY) {
+    await Promise.all(systems.slice(i, i + HISTORY_CONCURRENCY).map(load))
   }
 }
 
@@ -271,18 +337,31 @@ export function apply (ctx: Context, config: Config) {
     if (!config.hubUrl) return '尚未配置 Beszel Hub 地址。'
 
     try {
-      const all = await fetchSystems({
+      const auth: BeszelAuth = {
         hubUrl: config.hubUrl,
         identity: config.identity,
         password: config.password,
         timeout: config.timeout
-      })
+      }
+      const all = await fetchSystems(auth)
 
       let shown = all
       if (config.hidePaused) shown = shown.filter((system) => system.status !== 'paused')
       if (target) {
-        const keyword = target.trim().toLowerCase()
-        shown = shown.filter((system) => system.name?.toLowerCase() === keyword || system.id === target)
+        const pattern = target.trim()
+        // 优先当作正则，写法非法时退回普通包含匹配
+        let regex: RegExp | null = null
+        try {
+          regex = new RegExp(pattern, 'i')
+        } catch {
+          regex = null
+        }
+        shown = shown.filter((system) => {
+          if (system.id === target) return true
+          const name = system.name || ''
+          if (!name) return false
+          return regex ? regex.test(name) : name.toLowerCase().includes(pattern.toLowerCase())
+        })
         if (shown.length === 0) return `未找到服务器：${target}`
       }
 
@@ -293,6 +372,13 @@ export function apply (ctx: Context, config: Config) {
       const fields: CardFields = { ...FIELDS, ...config.fields }
       // 指定单台服务器时隐藏总览，避免出现一排无意义的 0
       if (target) fields.overview = false
+
+      const charts = normalizeCharts(config.charts)
+      const heartbeatRange: HeartbeatRange = config.heartbeatRange ?? '20m'
+      const buckets = config.heartbeatBuckets ?? 30
+      if (fields.heartbeat || charts.length > 0) {
+        await attachHistory(shown, auth, heartbeatRange, buckets, charts, logger, config.debug)
+      }
 
       let background: BackgroundType = config.background || 'aurora'
       let backgroundImage = ''
@@ -309,6 +395,9 @@ export function apply (ctx: Context, config: Config) {
         summary: summarize(shown),
         footer: config.footerText || '',
         fields,
+        hostDisplay: config.hostDisplay ?? 'show',
+        charts,
+        heartbeatRange,
         theme: {
           mode: config.theme === 'light' ? 'light' : 'dark',
           accent: config.accent || '#4f8cff',

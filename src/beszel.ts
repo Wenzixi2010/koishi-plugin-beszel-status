@@ -1,4 +1,4 @@
-import type { BeszelSystem } from './types'
+import type { BeszelStatRecord, BeszelSystem } from './types'
 
 export class BeszelError extends Error {
   constructor (message: string) {
@@ -92,19 +92,24 @@ function normalizeInfo (value: any): any {
   }
 }
 
-export async function fetchSystems (auth: BeszelAuth): Promise<BeszelSystem[]> {
-  const base = normalizeUrl(auth.hubUrl)
-  const url = `${base}/api/collections/systems/records?perPage=200&sort=name`
-
+/** 带 token 的 GET，token 失效时清缓存重登一次 */
+async function authedGet (auth: BeszelAuth, url: string): Promise<Response> {
   let token = await getToken(auth)
   let response = await request(url, { headers: { Authorization: token } }, auth.timeout)
 
-  // token 失效时清缓存重登一次
   if (response.status === 401) {
     tokenCache.delete(cacheKey(auth))
     token = await authenticate(auth)
     response = await request(url, { headers: { Authorization: token } }, auth.timeout)
   }
+
+  return response
+}
+
+export async function fetchSystems (auth: BeszelAuth): Promise<BeszelSystem[]> {
+  const base = normalizeUrl(auth.hubUrl)
+  const url = `${base}/api/collections/systems/records?perPage=200&sort=name`
+  const response = await authedGet(auth, url)
 
   if (!response.ok) {
     throw new BeszelError(`获取服务器列表失败（HTTP ${response.status}）`)
@@ -113,6 +118,29 @@ export async function fetchSystems (auth: BeszelAuth): Promise<BeszelSystem[]> {
   const data: any = await response.json().catch(() => null)
   const items: any[] = Array.isArray(data?.items) ? data.items : []
   return items.map((item) => ({ ...item, info: normalizeInfo(item?.info) })) as BeszelSystem[]
+}
+
+/**
+ * 拉取单台服务器的 system_stats 历史。
+ * type 同时决定聚合粒度与保留时长：1m≈1h / 10m≈12h / 20m≈24h / 120m≈7d / 480m≈30d。
+ * 结果按 created 升序，便于直接分桶与连线。
+ */
+export async function fetchSystemStats (auth: BeszelAuth, systemId: string, type: string, perPage = 200): Promise<BeszelStatRecord[]> {
+  const base = normalizeUrl(auth.hubUrl)
+  const filter = encodeURIComponent(`(system="${systemId}"&&type="${type}")`)
+  const url = `${base}/api/collections/system_stats/records?filter=${filter}&sort=-created&perPage=${perPage}`
+  const response = await authedGet(auth, url)
+
+  if (!response.ok) {
+    throw new BeszelError(`获取历史数据失败（HTTP ${response.status}）`)
+  }
+
+  const data: any = await response.json().catch(() => null)
+  const items: any[] = Array.isArray(data?.items) ? data.items : []
+  return items
+    .map((item) => ({ ...item, stats: normalizeInfo(item?.stats) }))
+    .filter((item) => item && item.created)
+    .reverse() as BeszelStatRecord[]
 }
 
 export function clearTokenCache (): void {

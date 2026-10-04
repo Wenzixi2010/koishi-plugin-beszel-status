@@ -274,6 +274,31 @@ ${bgLayer}
 .chip-warn { color: ${warn}; background: ${rgba(warn, 0.13)}; }
 .chip-danger { color: ${danger}; background: ${rgba(danger, 0.13)}; }
 
+/* 历史：心跳条 + 折线图 */
+.history { margin-top: 14px; display: flex; flex-direction: column; gap: 11px; }
+.hb-head { display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: ${sub}; margin-bottom: 6px; }
+.hb-range { color: ${sub}; }
+.hb-bars { display: flex; gap: 3px; height: 20px; }
+.hb-bars > i { flex: 1 1 0; min-width: 2px; border-radius: 3px; background: ${surfaceTertiary}; }
+.hb-bars > i.hb-up { background: ${ok}; }
+.hb-bars > i.hb-down { background: ${danger}; }
+.hb-bars > i.hb-none { background: ${borderSoft}; }
+
+.charts { display: grid; gap: 10px; }
+.spark {
+  background: ${surfaceTertiary}; border: 1px solid ${borderSoft};
+  border-radius: 14px; padding: 8px 11px 5px;
+}
+.spark-head { display: flex; align-items: baseline; justify-content: space-between; font-size: 11.5px; color: ${sub}; }
+.spark-head b { color: ${text}; font-weight: 600; font-variant-numeric: tabular-nums; }
+.spark svg { display: block; width: 100%; height: 40px; margin-top: 2px; }
+.spark-area { fill: ${rgba(accent, dark ? 0.20 : 0.15)}; stroke: none; }
+.spark-line {
+  fill: none; stroke: ${accent}; stroke-width: 1.6;
+  stroke-linejoin: round; stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
 .footer {
   display: flex; align-items: center; justify-content: space-between;
   padding: 16px 32px 20px; font-size: 11.5px; color: ${sub};

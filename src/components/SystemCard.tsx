@@ -1,17 +1,23 @@
 import React from 'react'
-import type { BeszelInfo, BeszelSystem, CardFields } from '../types'
-import { formatBytes, formatPercent, formatUptime, osName } from '../format'
+import type { BeszelInfo, BeszelSystem, CardFields, ChartMetric, HeartbeatRange, HostDisplay } from '../types'
+import { RANGE_LABEL } from '../history'
+import { formatBytes, formatPercent, formatUptime, maskHost, osName } from '../format'
 import { Chip, MetaItem, MetricBar, StatusPill } from './parts'
+import { Heartbeat, Sparkline } from './History'
 
 interface Props {
   system: BeszelSystem
   fields: CardFields
+  hostDisplay: HostDisplay
+  charts: ChartMetric[]
+  heartbeatRange: HeartbeatRange
 }
 
 /** 单个服务器的状态卡片 */
-export function SystemCard ({ system, fields }: Props) {
+export function SystemCard ({ system, fields, hostDisplay, charts, heartbeatRange }: Props) {
   const info: BeszelInfo = system.info ?? {}
   const status = system.status ?? 'pending'
+  const history = system.history
 
   const metrics: React.ReactNode[] = []
   // 离线或未上报的机器没有数据，缺值的项直接不画
@@ -62,15 +68,33 @@ export function SystemCard ({ system, fields }: Props) {
     }
   }
 
+  const host = system.host ? (hostDisplay === 'mask' ? maskHost(system.host) : system.host) : ''
+  const showHost = hostDisplay !== 'hide' && !!host
+
+  const plots = charts.filter((metric) => (history?.series?.[metric]?.length ?? 0) > 1)
+  const showHeartbeat = fields.heartbeat && (history?.heartbeat?.length ?? 0) > 0
+
   return (
     <div className={`sys sys-${status}`}>
       <div className="sys-head">
         <span className="sys-name">{system.name}</span>
-        {fields.host && <span className="sys-host">{system.host}{system.port ? `:${system.port}` : ''}</span>}
+        {showHost && <span className="sys-host">{host}{system.port ? `:${system.port}` : ''}</span>}
         <StatusPill status={status} />
       </div>
 
       {metrics.length > 0 && <div className="metrics">{metrics}</div>}
+
+      {(showHeartbeat || plots.length > 0) && (
+        <div className="history">
+          {showHeartbeat && <Heartbeat states={history.heartbeat} rangeLabel={RANGE_LABEL[heartbeatRange]} />}
+          {plots.length > 0 && (
+            <div className="charts" style={{ gridTemplateColumns: `repeat(${plots.length}, 1fr)` }}>
+              {plots.map((metric) => <Sparkline key={metric} metric={metric} values={history.series[metric] ?? []} />)}
+            </div>
+          )}
+        </div>
+      )}
+
       {meta.length > 0 && <div className="meta">{meta}</div>}
       {chips.length > 0 && <div className="chips">{chips}</div>}
     </div>

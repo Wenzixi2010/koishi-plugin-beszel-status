@@ -76,6 +76,20 @@ export function formatDateTime (date: Date): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
 
+/** 打码主机地址：IPv4 保留前两段，IPv6 保留首段，域名保留首字符与后缀 */
+export function maskHost (host?: string): string {
+  const value = String(host ?? '').trim()
+  if (!value) return ''
+
+  const v4 = value.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)
+  if (v4) return `${v4[1]}.${v4[2]}.***.***`
+  if (value.includes(':')) return `${value.split(':')[0]}:***`
+
+  const parts = value.split('.').filter(Boolean)
+  if (parts.length >= 2) return `${parts[0].slice(0, 1)}***.${parts[parts.length - 1]}`
+  return `${value.slice(0, 1)}***`
+}
+
 /** 系统类型枚举转名称，未知时回退为原始值 */
 const OS_NAMES: Record<number, string> = {
   1: 'Linux',

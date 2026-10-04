@@ -6,6 +6,8 @@ export interface BeszelSystem {
   port?: string
   status: SystemStatus
   info?: BeszelInfo
+  /** 拉取到的历史数据，用于心跳图与折线图 */
+  history?: SystemHistory
   updated?: string
   created?: string
   [key: string]: any
@@ -64,6 +66,47 @@ export interface BeszelInfo {
   [key: string]: any
 }
 
+/** 主机地址的显示方式 */
+export type HostDisplay = 'show' | 'mask' | 'hide'
+
+/** 折线图可选的指标 */
+export type ChartMetric = 'cpu' | 'memory' | 'disk'
+
+/** 心跳图单个区间的状态，none 表示该区间还没有任何上报 */
+export type HeartbeatState = 'up' | 'down' | 'none'
+
+/** 心跳图 / 折线图使用的历史聚合粒度，同时也是保留时长 */
+export type HeartbeatRange = '1m' | '10m' | '20m' | '120m' | '480m'
+
+/** system_stats 里的指标快照，短键与 agent 上报一致 */
+export interface BeszelStatPoint {
+  /** CPU 占用率 */
+  cpu?: number
+  /** 内存占用率 */
+  mp?: number
+  /** 磁盘占用率 */
+  dp?: number
+  [key: string]: any
+}
+
+/** system_stats 集合的一条历史记录 */
+export interface BeszelStatRecord {
+  id: string
+  system: string
+  type: string
+  stats?: BeszelStatPoint
+  created: string
+  updated?: string
+}
+
+/** 单台服务器的历史数据 */
+export interface SystemHistory {
+  /** 各时间桶是否在线 */
+  heartbeat: HeartbeatState[]
+  /** 各指标的时间序列，按时间升序，最新在末尾 */
+  series: Partial<Record<ChartMetric, number[]>>
+}
+
 export type ThemeMode = 'light' | 'dark'
 
 export type ImageFormat = 'png' | 'jpeg' | 'webp'
@@ -74,7 +117,6 @@ export type BackgroundType = 'plain' | 'aurora' | 'grid' | 'dots' | 'image'
 /** 卡片上各项内容的显示开关 */
 export interface CardFields {
   overview: boolean
-  host: boolean
   cpu: boolean
   memory: boolean
   disk: boolean
@@ -91,6 +133,7 @@ export interface CardFields {
   updates: boolean
   battery: boolean
   net: boolean
+  heartbeat: boolean
   footer: boolean
 }
 
@@ -132,5 +175,11 @@ export interface CardData {
   summary: StatusSummary
   footer: string
   fields: CardFields
+  /** 主机地址显示方式 */
+  hostDisplay: HostDisplay
+  /** 需要绘制折线图的指标 */
+  charts: ChartMetric[]
+  /** 心跳图所在的历史区间，用于图例文案 */
+  heartbeatRange: HeartbeatRange
   theme: CardTheme
 }
