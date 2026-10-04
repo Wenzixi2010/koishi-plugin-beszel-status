@@ -44,6 +44,12 @@
 
 服务端要求 Node.js 18+（依赖全局 `fetch`）。
 
+## 依赖安全
+
+插件自身的运行时依赖只有 `react` / `react-dom`（含 `scheduler` 共 3 个包），`npm audit --omit=dev` 结果为 0 漏洞。
+
+在 Koishi 项目里跑 `npm audit` 时本插件可能被连带列出，原因是 Koishi 的传递依赖 `@cordisjs/plugin-http` 锁定了 `file-type@^16.5.4`，命中 [GHSA-5v7r-6r5c-r473](https://github.com/advisories/GHSA-5v7r-6r5c-r473)。该问题属于 Koishi 上游，所有 Koishi 插件均受影响，插件侧无法修复。
+
 ## License
 
 MIT
