@@ -10,11 +10,12 @@ interface Props {
   fields: CardFields
   hostDisplay: HostDisplay
   charts: ChartMetric[]
+  chartValue: boolean
   heartbeatRange: HeartbeatRange
 }
 
 /** 单个服务器的状态卡片 */
-export function SystemCard ({ system, fields, hostDisplay, charts, heartbeatRange }: Props) {
+export function SystemCard ({ system, fields, hostDisplay, charts, chartValue, heartbeatRange }: Props) {
   const info: BeszelInfo = system.info ?? {}
   const status = system.status ?? 'pending'
   const history = system.history
@@ -94,7 +95,7 @@ export function SystemCard ({ system, fields, hostDisplay, charts, heartbeatRang
           {showHeartbeat && <Heartbeat states={history.heartbeat} rangeLabel={RANGE_LABEL[heartbeatRange]} />}
           {plots.length > 0 && (
             <div className="charts" style={{ gridTemplateColumns: `repeat(${plots.length}, 1fr)` }}>
-              {plots.map((metric) => <Sparkline key={metric} metric={metric} values={history.series[metric] ?? []} />)}
+              {plots.map((metric) => <Sparkline key={metric} metric={metric} values={history.series[metric] ?? []} showValue={chartValue} />)}
             </div>
           )}
         </div>

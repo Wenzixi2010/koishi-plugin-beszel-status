@@ -179,6 +179,8 @@ export interface CardData {
   hostDisplay: HostDisplay
   /** 需要绘制折线图的指标 */
   charts: ChartMetric[]
+  /** 折线图是否显示当前数值 */
+  chartValue: boolean
   /** 心跳图所在的历史区间，用于图例文案 */
   heartbeatRange: HeartbeatRange
   theme: CardTheme

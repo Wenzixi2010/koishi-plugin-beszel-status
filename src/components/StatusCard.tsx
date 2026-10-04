@@ -7,7 +7,7 @@ import { SystemCard } from './SystemCard'
 const LEGEND: Array<keyof StatusSummary> = ['up', 'down', 'paused', 'pending']
 
 export function StatusCard ({ data }: { data: CardData }) {
-  const { systems, summary, fields, title, subtitle, footer, theme, hostDisplay, charts, heartbeatRange } = data
+  const { systems, summary, fields, title, subtitle, footer, theme, hostDisplay, charts, chartValue, heartbeatRange } = data
   const online = summary.total > 0 ? Math.round((summary.up / summary.total) * 100) : 0
 
   return (
@@ -58,6 +58,7 @@ export function StatusCard ({ data }: { data: CardData }) {
               fields={fields}
               hostDisplay={hostDisplay}
               charts={charts}
+              chartValue={chartValue}
               heartbeatRange={heartbeatRange}
             />
           ))

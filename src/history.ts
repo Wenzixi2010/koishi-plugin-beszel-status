@@ -9,6 +9,15 @@ export const RANGE_MS: Record<HeartbeatRange, number> = {
   '480m': 30 * 24 * 60 * 60 * 1000
 }
 
+/** 各聚合粒度对应的上报间隔（毫秒） */
+export const INTERVAL_MS: Record<HeartbeatRange, number> = {
+  '1m': 60 * 1000,
+  '10m': 10 * 60 * 1000,
+  '20m': 20 * 60 * 1000,
+  '120m': 120 * 60 * 1000,
+  '480m': 480 * 60 * 1000
+}
+
 /** 图表上展示的区间文案 */
 export const RANGE_LABEL: Record<HeartbeatRange, string> = {
   '1m': '最近 1 小时',
@@ -35,11 +44,13 @@ const METRIC_KEY: Record<ChartMetric, string> = {
  * 桶内有记录即在线；首个记录之前视为无数据，之后缺失视为离线。
  */
 export function buildHeartbeat (records: BeszelStatRecord[], range: HeartbeatRange, buckets: number, now = Date.now()): HeartbeatState[] {
-  const count = Math.max(1, Math.floor(buckets))
+  const windowMs = RANGE_MS[range] ?? RANGE_MS['20m']
+  // 桶不能比上报间隔还密，否则每个桶都可能空着，被误判成离线
+  const density = Math.max(1, Math.floor(windowMs / (INTERVAL_MS[range] ?? INTERVAL_MS['20m'])))
+  const count = Math.max(1, Math.min(Math.floor(buckets), density))
   const states: HeartbeatState[] = new Array(count).fill('none')
   if (records.length === 0) return states
 
-  const windowMs = RANGE_MS[range] ?? RANGE_MS['20m']
   const width = windowMs / count
   const start = now - windowMs
 
@@ -49,12 +60,13 @@ export function buildHeartbeat (records: BeszelStatRecord[], range: HeartbeatRan
     .sort((a, b) => a - b)
   if (times.length === 0) return states
 
+  // 用就近取整而不是向下取整，抵消上报时间的轻微抖动
   for (const time of times) {
-    const index = Math.floor((time - start) / width)
+    const index = Math.round((time - start) / width)
     if (index >= 0 && index < count) states[index] = 'up'
   }
 
-  const firstIndex = Math.max(0, Math.floor((times[0] - start) / width))
+  const firstIndex = Math.max(0, Math.round((times[0] - start) / width))
   const last = times[times.length - 1]
   for (let i = firstIndex; i < count; i++) {
     if (states[i] === 'up') continue

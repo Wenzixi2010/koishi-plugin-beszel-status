@@ -45,6 +45,7 @@ export interface Config {
   heartbeatRange: HeartbeatRange
   heartbeatBuckets: number
   charts: ChartMetric[]
+  chartValue: boolean
 
   fields: CardFields
 
@@ -181,6 +182,7 @@ export const Config: Schema<Config> = Schema.intersect([
       Schema.const('memory').description('内存占用率'),
       Schema.const('disk').description('磁盘占用率')
     ])).default(['cpu']).description('折线图显示的指标，可多选，留空则不显示折线图'),
+    chartValue: Schema.boolean().default(true).description('在折线图右上角显示当前占用率'),
     heartbeatRange: Schema.union([
       Schema.const('1m').description('最近 1 小时'),
       Schema.const('10m').description('最近 12 小时'),
@@ -188,8 +190,8 @@ export const Config: Schema<Config> = Schema.intersect([
       Schema.const('120m').description('最近 7 天'),
       Schema.const('480m').description('最近 30 天')
     ]).default('20m').description('历史数据区间（同时决定心跳图与折线图的时间跨度）'),
-    heartbeatBuckets: Schema.natural().default(30).min(8).max(60)
-      .description('心跳图的时间分段数量，越多越细')
+    heartbeatBuckets: Schema.natural().default(72).min(8).max(150)
+      .description('心跳图的时间分段数量，越多越细（超过数据密度时自动收紧）')
   }).description('历史与图表'),
 
   Schema.object({
@@ -375,7 +377,7 @@ export function apply (ctx: Context, config: Config) {
 
       const charts = normalizeCharts(config.charts)
       const heartbeatRange: HeartbeatRange = config.heartbeatRange ?? '20m'
-      const buckets = config.heartbeatBuckets ?? 30
+      const buckets = config.heartbeatBuckets ?? 72
       if (fields.heartbeat || charts.length > 0) {
         await attachHistory(shown, auth, heartbeatRange, buckets, charts, logger, config.debug)
       }
@@ -397,6 +399,7 @@ export function apply (ctx: Context, config: Config) {
         fields,
         hostDisplay: config.hostDisplay ?? 'show',
         charts,
+        chartValue: config.chartValue !== false,
         heartbeatRange,
         theme: {
           mode: config.theme === 'light' ? 'light' : 'dark',

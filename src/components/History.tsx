@@ -12,7 +12,6 @@ export function Heartbeat ({ states, rangeLabel }: { states: HeartbeatState[]; r
   return (
     <div className="hb">
       <div className="hb-head">
-        <span>在线心跳</span>
         <span className="hb-range">{rangeLabel}</span>
       </div>
       <div className="hb-bars">
@@ -23,7 +22,7 @@ export function Heartbeat ({ states, rangeLabel }: { states: HeartbeatState[]; r
 }
 
 /** 指标折线迷你图，取值区间固定 0-100% */
-export function Sparkline ({ metric, values }: { metric: ChartMetric; values: number[] }) {
+export function Sparkline ({ metric, values, showValue = true }: { metric: ChartMetric; values: number[]; showValue?: boolean }) {
   if (values.length === 0) return null
 
   const points = values.map((value, index) => {
@@ -40,7 +39,7 @@ export function Sparkline ({ metric, values }: { metric: ChartMetric; values: nu
     <div className="spark">
       <div className="spark-head">
         <span>{METRIC_LABEL[metric]}</span>
-        <b>{formatPercent(latest)}</b>
+        {showValue && <b>{formatPercent(latest)}</b>}
       </div>
       <svg viewBox={`0 0 ${SVG_W} ${SVG_H}`} preserveAspectRatio="none">
         <path className="spark-area" d={area} />

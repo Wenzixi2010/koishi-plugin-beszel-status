@@ -94,7 +94,10 @@ export function buildCss (theme: CardTheme): string {
   const { ok, warn, danger } = statusColors(theme)
   const useImage = theme.background === 'image' && !!theme.backgroundImage
   const glass = theme.background !== 'plain'
-  const boardBg = glass ? rgba(surface, useImage ? 0.88 : 0.91) : surface
+  // 主卡片与子卡片都留一点透明度，让背景透出来；自定义图片偏花，透明度相应低一些
+  const boardBg = glass ? rgba(surface, useImage ? 0.82 : 0.74) : surface
+  const subBg = glass ? rgba(surfaceSecondary, useImage ? 0.78 : 0.66) : surfaceSecondary
+  const holeBg = glass ? rgba(surface, 0.92) : surface
   const backdrop = glass ? 'backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);' : ''
   const appPad = useImage ? 20 : glass ? 16 : 12
 
@@ -144,7 +147,7 @@ ${bgLayer}
 .overview-total span { display: block; margin-top: 5px; color: ${sub}; font-size: 11px; }
 .overview-rate { display: flex; align-items: center; gap: 9px; }
 .ring { position: relative; width: 38px; height: 38px; flex: 0 0 auto; border-radius: 50%; }
-.ring-hole { position: absolute; inset: 4px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: ${surface}; }
+.ring-hole { position: absolute; inset: 4px; display: flex; align-items: center; justify-content: center; border-radius: 50%; background: ${holeBg}; }
 .ring-value { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .ring-value small { font-size: 8px; }
 .ring-label { color: ${sub}; font-size: 11px; }
@@ -180,13 +183,13 @@ ${bgLayer}
 .chip b { color: ${text}; font-weight: 600; font-variant-numeric: tabular-nums; }
 .chip-warn, .chip-warn b { color: ${warn}; } .chip-danger, .chip-danger b { color: ${danger}; }
 .history { display: flex; flex-direction: column; gap: 10px; margin: 14px 0 0 17px; }
-.hb-head { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 6px; color: ${sub}; font-size: 10px; }
+.hb-head { display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 6px; color: ${sub}; font-size: 10px; }
 .hb-range { color: ${sub}; }
 .hb-bars { display: flex; gap: 2px; height: 14px; }
 .hb-bars > i { flex: 1 1 0; min-width: 1px; border-radius: 2px; background: ${surfaceTertiary}; }
 .hb-bars > i.hb-up { background: ${ok}; } .hb-bars > i.hb-down { background: ${danger}; } .hb-bars > i.hb-none { background: ${border}; }
 .charts { display: grid; gap: 9px; }
-.spark { min-width: 0; padding: 8px 10px 5px; border: 1px solid ${borderSoft}; border-radius: 7px; background: ${surfaceSecondary}; }
+.spark { min-width: 0; padding: 8px 10px 5px; border: 1px solid ${borderSoft}; border-radius: 7px; background: ${subBg}; }
 .spark-head { display: flex; justify-content: space-between; gap: 8px; color: ${sub}; font-size: 10px; }
 .spark-head b { color: ${text}; font-weight: 600; font-variant-numeric: tabular-nums; }
 .spark svg { display: block; width: 100%; height: 32px; margin-top: 4px; }
