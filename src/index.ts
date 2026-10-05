@@ -6,7 +6,7 @@ import type { BeszelAuth } from './beszel'
 import { renderStatusImage } from './render'
 import { statusOrder } from './format'
 import { buildHistory } from './history'
-import type { BackgroundType, BeszelSystem, CardData, CardFields, ChartMetric, HeartbeatRange, HostDisplay, StatusSummary } from './types'
+import type { BackgroundType, BeszelSystem, CardData, CardFields, ChartMetric, HeartbeatRange, HostDisplay, StatusSummary, SurfaceStyle } from './types'
 
 export const name = 'beszel-status'
 
@@ -33,6 +33,9 @@ export interface Config {
   backgroundImage: string
   backgroundBlur: number
   backgroundDim: number
+  surfaceStyle: SurfaceStyle
+  surfaceOpacity: number
+  acrylicBlur: number
   width: number
   deviceScaleFactor: number
   format: 'png' | 'jpeg' | 'webp'
@@ -122,6 +125,17 @@ export const Config: Schema<Config> = Schema.intersect([
       .description('背景模糊强度（像素）'),
     backgroundDim: Schema.natural().default(25).max(100)
       .description('背景压暗程度（0-100，越大越暗，便于看清文字）'),
+    surfaceStyle: Schema.union([
+      Schema.const('default').description('默认半透明效果'),
+      Schema.const('solid').description('不透明纯色表面'),
+      Schema.const('transparent').description('全透明表面'),
+      Schema.const('custom').description('自定义透明度'),
+      Schema.const('acrylic').description('亚克力（半透明 + 背景模糊）')
+    ]).default('default').description('卡片表面效果'),
+    surfaceOpacity: Schema.natural().default(72).max(100)
+      .description('卡片表面不透明度（0-100，仅自定义透明度和亚克力生效）'),
+    acrylicBlur: Schema.natural().default(18).max(60)
+      .description('亚克力背景模糊强度（像素）'),
     width: Schema.natural().default(760).min(320).max(1400)
       .description('卡片宽度（像素）'),
     deviceScaleFactor: Schema.number().default(2).min(1).max(4)
@@ -179,8 +193,7 @@ export const Config: Schema<Config> = Schema.intersect([
     ]).default('show').description('设备地址显示方式'),
     charts: Schema.array(Schema.union([
       Schema.const('cpu').description('CPU 占用率'),
-      Schema.const('memory').description('内存占用率'),
-      Schema.const('disk').description('磁盘占用率')
+      Schema.const('memory').description('内存占用率')
     ])).default(['cpu']).description('折线图显示的指标，可多选，留空则不显示折线图'),
     chartValue: Schema.boolean().default(true).description('在折线图右上角显示当前占用率'),
     heartbeatRange: Schema.union([
@@ -256,7 +269,7 @@ function sortSystems (systems: BeszelSystem[], sortBy: Config['sortBy']): Beszel
   }
 }
 
-const CHART_METRICS: ChartMetric[] = ['cpu', 'memory', 'disk']
+const CHART_METRICS: ChartMetric[] = ['cpu', 'memory']
 
 /** 过滤掉配置里非法的图表指标，并保持固定顺序 */
 function normalizeCharts (value?: ChartMetric[]): ChartMetric[] {
@@ -408,7 +421,10 @@ export function apply (ctx: Context, config: Config) {
           background,
           backgroundImage,
           backgroundBlur: config.backgroundBlur ?? 0,
-          backgroundDim: config.backgroundDim ?? 30
+          backgroundDim: config.backgroundDim ?? 30,
+          surfaceStyle: config.surfaceStyle ?? 'default',
+          surfaceOpacity: config.surfaceOpacity ?? 72,
+          acrylicBlur: config.acrylicBlur ?? 18
         }
       }
 

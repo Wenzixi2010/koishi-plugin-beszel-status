@@ -93,13 +93,32 @@ export function buildCss (theme: CardTheme): string {
   const shadow = dark ? '0 18px 48px rgba(0,0,0,.28)' : '0 18px 48px rgba(47,43,32,.09)'
   const { ok, warn, danger } = statusColors(theme)
   const useImage = theme.background === 'image' && !!theme.backgroundImage
-  const glass = theme.background !== 'plain'
-  // 主卡片与子卡片都留一点透明度，让背景透出来；自定义图片偏花，透明度相应低一些
-  const boardBg = glass ? rgba(surface, useImage ? 0.82 : 0.74) : surface
-  const subBg = glass ? rgba(surfaceSecondary, useImage ? 0.78 : 0.66) : surfaceSecondary
-  const holeBg = glass ? rgba(surface, 0.92) : surface
-  const backdrop = glass ? 'backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);' : ''
-  const appPad = useImage ? 20 : glass ? 16 : 12
+  const legacyGlass = theme.background !== 'plain'
+  const customAlpha = Math.min(100, Math.max(0, Number(theme.surfaceOpacity) || 0)) / 100
+  const surfaceAlpha = theme.surfaceStyle === 'solid'
+    ? 1
+    : theme.surfaceStyle === 'transparent'
+      ? 0
+      : theme.surfaceStyle === 'custom' || theme.surfaceStyle === 'acrylic'
+        ? customAlpha
+        : legacyGlass ? (useImage ? 0.82 : 0.74) : 1
+  const secondaryAlpha = theme.surfaceStyle === 'solid'
+    ? 1
+    : theme.surfaceStyle === 'transparent'
+      ? 0
+      : theme.surfaceStyle === 'custom' || theme.surfaceStyle === 'acrylic'
+        ? customAlpha
+        : legacyGlass ? (useImage ? 0.78 : 0.66) : 1
+  const boardBg = rgba(surface, surfaceAlpha)
+  const subBg = rgba(surfaceSecondary, secondaryAlpha)
+  const holeBg = rgba(surface, theme.surfaceStyle === 'default' && legacyGlass ? 0.92 : surfaceAlpha)
+  const acrylic = theme.surfaceStyle === 'acrylic'
+  const backdrop = acrylic
+    ? `backdrop-filter: blur(${theme.acrylicBlur}px); -webkit-backdrop-filter: blur(${theme.acrylicBlur}px);`
+    : theme.surfaceStyle === 'default' && legacyGlass
+      ? 'backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);'
+      : ''
+  const appPad = useImage ? 20 : legacyGlass || acrylic ? 16 : 12
 
   let bgLayer = ''
   if (useImage) {
@@ -141,8 +160,9 @@ ${bgLayer}
 .sub { margin-top: 4px; color: ${sub}; font-size: 12px; overflow-wrap: anywhere; }
 .head-time { flex: 0 0 auto; text-align: right; color: ${sub}; font-size: 10px; }
 .head-time b { display: block; margin-top: 2px; color: ${text}; font-size: 11px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.overview { display: grid; grid-template-columns: minmax(170px, .8fr) minmax(0, 1.2fr); align-items: center; gap: 22px; margin: 0 30px; padding: 19px 0; border-bottom: 1px solid ${borderSoft}; }
-.overview-lead { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.overview { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: center; gap: 28px; margin: 0 30px; padding: 19px 0; border-bottom: 1px solid ${borderSoft}; }
+.overview-lead { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-width: 0; }
+.overview-total { min-width: 0; }
 .overview-total b { display: block; font-size: 26px; line-height: 1.1; font-weight: 650; font-variant-numeric: tabular-nums; }
 .overview-total span { display: block; margin-top: 5px; color: ${sub}; font-size: 11px; }
 .overview-rate { display: flex; align-items: center; gap: 9px; }
@@ -188,6 +208,8 @@ ${bgLayer}
 .hb-bars { display: flex; gap: 2px; height: 14px; }
 .hb-bars > i { flex: 1 1 0; min-width: 1px; border-radius: 2px; background: ${surfaceTertiary}; }
 .hb-bars > i.hb-up { background: ${ok}; } .hb-bars > i.hb-down { background: ${danger}; } .hb-bars > i.hb-none { background: ${border}; }
+.hb-times { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; color: ${sub}; font-size: 9px; font-variant-numeric: tabular-nums; }
+.hb-times span:nth-child(2) { text-align: center; } .hb-times span:last-child { text-align: right; }
 .charts { display: grid; gap: 9px; }
 .spark { min-width: 0; padding: 8px 10px 5px; border: 1px solid ${borderSoft}; border-radius: 7px; background: ${subBg}; }
 .spark-head { display: flex; justify-content: space-between; gap: 8px; color: ${sub}; font-size: 10px; }

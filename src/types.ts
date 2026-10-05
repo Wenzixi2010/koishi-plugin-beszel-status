@@ -70,7 +70,7 @@ export interface BeszelInfo {
 export type HostDisplay = 'show' | 'mask' | 'hide'
 
 /** 折线图可选的指标 */
-export type ChartMetric = 'cpu' | 'memory' | 'disk'
+export type ChartMetric = 'cpu' | 'memory'
 
 /** 心跳图单个区间的状态，none 表示该区间还没有任何上报 */
 export type HeartbeatState = 'up' | 'down' | 'none'
@@ -103,6 +103,8 @@ export interface BeszelStatRecord {
 export interface SystemHistory {
   /** 各时间桶是否在线 */
   heartbeat: HeartbeatState[]
+  /** 心跳图的时间窗口，毫秒时间戳 */
+  heartbeatWindow?: { start: number; end: number }
   /** 各指标的时间序列，按时间升序，最新在末尾 */
   series: Partial<Record<ChartMetric, number[]>>
 }
@@ -113,6 +115,8 @@ export type ImageFormat = 'png' | 'jpeg' | 'webp'
 
 /** 卡片背景样式 */
 export type BackgroundType = 'plain' | 'aurora' | 'grid' | 'dots' | 'image'
+
+export type SurfaceStyle = 'default' | 'solid' | 'transparent' | 'custom' | 'acrylic'
 
 /** 卡片上各项内容的显示开关 */
 export interface CardFields {
@@ -149,6 +153,11 @@ export interface CardTheme {
   backgroundBlur: number
   /** 背景压暗程度（0-100） */
   backgroundDim: number
+  surfaceStyle: SurfaceStyle
+  /** 表面不透明度（0-100），仅 custom/acrylic 生效 */
+  surfaceOpacity: number
+  /** 亚克力背景模糊强度（像素） */
+  acrylicBlur: number
 }
 
 /** 渲染（截图）相关参数 */

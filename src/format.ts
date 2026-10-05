@@ -90,7 +90,7 @@ export function maskHost (host?: string): string {
   return `${value.slice(0, 1)}***`
 }
 
-/** 系统类型枚举转名称，未知时回退为原始值 */
+/** 系统类型枚举转名称，未知或未上报时返回空串（不显示） */
 const OS_NAMES: Record<number, string> = {
   1: 'Linux',
   2: 'Windows',
@@ -99,6 +99,7 @@ const OS_NAMES: Record<number, string> = {
 }
 
 export function osName (value?: number): string {
-  if (value === undefined || value === null) return ''
-  return OS_NAMES[value] ?? `#${value}`
+  const n = Number(value)
+  if (!Number.isFinite(n) || n <= 0) return ''
+  return OS_NAMES[n] ?? ''
 }

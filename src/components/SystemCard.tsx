@@ -39,7 +39,8 @@ export function SystemCard ({ system, fields, hostDisplay, charts, chartValue, h
   if (fields.uptime) meta.push(<MetaItem key="uptime" label="运行" value={formatUptime(info.u)} />)
   if (fields.cpuModel && info.m) meta.push(<MetaItem key="model" label="CPU" value={info.m} />)
   if (fields.kernel && info.k) meta.push(<MetaItem key="kernel" label="内核" value={info.k} />)
-  if (fields.os && info.os !== undefined) meta.push(<MetaItem key="os" label="系统" value={osName(info.os)} />)
+  const osLabel = fields.os ? osName(info.os) : ''
+  if (osLabel) meta.push(<MetaItem key="os" label="系统" value={osLabel} />)
   if (fields.connType && info.ct) meta.push(<MetaItem key="ct" label="连接" value={info.ct} />)
   if (fields.net && info.bb) meta.push(<MetaItem key="net" label="带宽" value={info.b || formatBytes(info.bb)} />)
 
@@ -47,7 +48,8 @@ export function SystemCard ({ system, fields, hostDisplay, charts, chartValue, h
   if (fields.gpu && info.g !== undefined) {
     chips.push(<Chip key="gpu">GPU <b>{formatPercent(info.g)}</b></Chip>)
   }
-  if (fields.temp && info.dt !== undefined) {
+  // 没有温度传感器时 dt 会上报 0，这种情况不显示
+  if (fields.temp && Number(info.dt) > 0) {
     chips.push(<Chip key="temp">温度 <b>{Number(info.dt).toFixed(0)}°C</b></Chip>)
   }
   if (fields.services && Array.isArray(info.sv)) {
@@ -74,6 +76,8 @@ export function SystemCard ({ system, fields, hostDisplay, charts, chartValue, h
 
   const plots = charts.filter((metric) => (history?.series?.[metric]?.length ?? 0) > 1)
   const showHeartbeat = fields.heartbeat && (history?.heartbeat?.length ?? 0) > 0
+  // 折线图右上角的数值取实时值，和进度条保持一致
+  const liveValue: Partial<Record<ChartMetric, number>> = { cpu: info.cpu, memory: info.mp }
 
   return (
     <article className={`sys sys-${status}`}>
@@ -92,10 +96,10 @@ export function SystemCard ({ system, fields, hostDisplay, charts, chartValue, h
 
       {(showHeartbeat || plots.length > 0) && (
         <div className="history">
-          {showHeartbeat && <Heartbeat states={history.heartbeat} rangeLabel={RANGE_LABEL[heartbeatRange]} />}
+          {showHeartbeat && <Heartbeat states={history.heartbeat} rangeLabel={RANGE_LABEL[heartbeatRange]} window={history.heartbeatWindow} />}
           {plots.length > 0 && (
             <div className="charts" style={{ gridTemplateColumns: `repeat(${plots.length}, 1fr)` }}>
-              {plots.map((metric) => <Sparkline key={metric} metric={metric} values={history.series[metric] ?? []} showValue={chartValue} />)}
+              {plots.map((metric) => <Sparkline key={metric} metric={metric} values={history.series[metric] ?? []} current={liveValue[metric]} showValue={chartValue} />)}
             </div>
           )}
         </div>

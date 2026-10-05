@@ -29,14 +29,12 @@ export const RANGE_LABEL: Record<HeartbeatRange, string> = {
 
 export const METRIC_LABEL: Record<ChartMetric, string> = {
   cpu: 'CPU',
-  memory: '内存',
-  disk: '磁盘'
+  memory: '内存'
 }
 
 const METRIC_KEY: Record<ChartMetric, string> = {
   cpu: 'cpu',
-  memory: 'mp',
-  disk: 'dp'
+  memory: 'mp'
 }
 
 /**
@@ -97,5 +95,11 @@ export function buildSeries (records: BeszelStatRecord[], metric: ChartMetric, m
 export function buildHistory (records: BeszelStatRecord[], range: HeartbeatRange, buckets: number, charts: ChartMetric[]): SystemHistory {
   const series: SystemHistory['series'] = {}
   for (const metric of charts) series[metric] = buildSeries(records, metric)
-  return { heartbeat: buildHeartbeat(records, range, buckets), series }
+  const end = Date.now()
+  const windowMs = RANGE_MS[range] ?? RANGE_MS['20m']
+  return {
+    heartbeat: buildHeartbeat(records, range, buckets, end),
+    heartbeatWindow: { start: end - windowMs, end },
+    series
+  }
 }
